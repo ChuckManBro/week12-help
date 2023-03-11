@@ -1,112 +1,95 @@
+'use strict';
+// Margrith's Week-12
+
+// jQuery test
+// $('#create-new-student').click(doTheThing);
+// function doTheThing() {
+// 	console.log('The #create-new-student button was clicked!');
+// }
+
+const apiUrl = 'https://6409213d6ecd4f9e18a92d71.mockapi.io/api/Students';
+
 class Student {
-	constructor(name, number, title) {
-		this.name = name;
-		this.number = number;
-		this.title = title;
-		this.nameArray = [];
-		this.numberArray = [];
-		this.titleArray = [];
+	constructor(name, title, out, due) {
+		this.fullName = name;
+		this.bookTitle = title;
+		this.bookCheckedOut = out;
+		this.bookDueBack = due;
 	}
 }
 
-class StudentService {
-	static url = 'https://6409213d6ecd4f9e18a92d71.mockapi.io/api/Students';
+// GET - Render Student List
+function getAndRenderAll() {
+	// jQuery to GET all data from api
+	$.get(apiUrl, renderAll);
 
-	static async getAllStudents() {
-		const res = await fetch(this.url, {
-			method: 'GET',
-			headers: { 'content-type': 'application/json' },
-		});
-		if (res.ok) {
-			return res.json();
-		}
-	}
+	// After data successfully retrieved, this function
+	function renderAll(apiData) {
+		console.log(`API GET successful`);
 
-	static getStudent(id) {
-		return $.get(this.url + `/${id}`);
-	}
-
-	static async createStudent(student) {
-		const res = fetch(this.url, student, {
-			method: 'PUT',
-			headers: { 'content-type': 'application/json' },
-			body: JSON.stringify({ completed: true }),
-		});
-		if (res.ok) {
-			return res.json();
-		}
-	}
-
-	static updateStudent(student) {
-		return $.ajax({
-			url: this.url + `/${student._id}`,
-			datatype: 'json',
-			data: JSON.stringify(student),
-			contentType: 'application/json',
-			type: 'PUT',
-		});
-	}
-
-	static deleteStudent(id) {
-		return $.ajax({
-			url: this.url + `/${id}`,
-			type: 'DELETE',
-		});
-	}
-}
-
-class DOMmanager {
-	static students;
-
-	static getAllStudents() {
-		StudentService.getAllStudents().then((students) => this.render(students));
-	}
-
-	static deleteStudent(id) {
-		StudentService.deleteStudent(id)
-			.then(() => {
-				return StudentService.getAllStudents();
-			})
-			.then((students) => this.render(students));
-	}
-
-	static createHouse(name, number, title) {
-		StudentService.createStudent(new Student(name, number, title))
-			.then(() => {
-				return StudentService.getAllStudents();
-			})
-			.then((students) => this.render(students));
-	}
-
-	static render(students) {
-		this.students = students;
+		// Clear prior table rendering
 		$('#app-table').empty();
-		for (let student of students) {
-			$('#app-table').append(
-				`<tr>
-                    <th scope="row">${student.studentNo}</th>
-                    <td>${student.fullName}</td>
-                    <td>${student.bookTitle}</td>
-                    <td>${student.bookCheckedOut}</td>
-                    <td>${student.bookDueBack}</td>
-                    <td><button class="btn btn-danger" onclick="DOMmanager.deleteStudent('${student.id}')">Delete Student</button></td>
-                 </tr>`
-			);
+
+		// For-Of-Loop to render all students
+		for (let student of apiData) {
+			const outDate = convertDateFormat(student.bookCheckedOut);
+			const dueDate = convertDateFormat(student.bookDueBack);
+
+			$('#app-table').append(`<tr>
+	<th scope="row">${student.studentNo}</th>
+	<td>${student.fullName}</td>
+	<td>${student.bookTitle}</td>
+	<td>${outDate}</td>
+	<td>${dueDate}</td>
+	<td><button class="btn btn-danger" onclick="deleteStudent('${student.id}')">Delete</button></td>
+</tr>`);
 		}
 	}
 }
 
-// DOMmanager.getAllStudents();
-
-// Chuck's Additions
-
-// const buttonAddStudent = $('#create-new-student');
-// console.log(buttonAddStudent);
-// buttonAddStudent.click(() => console.log('Add Button was clicked!'));
-
-// OR
-$('#create-new-student').click(doTheThing);
-
-function doTheThing() {
-	console.log('Bloop Bloop Bleep The #create-new-student button was clicked!');
+function convertDateFormat(ISODate) {
+	// Convert Date format
+	const convertDate = new Date(ISODate);
+	const newMonth = convertDate.getMonth() + 1;
+	const newDayOfMonth = convertDate.getDate();
+	const newYear = convertDate.getFullYear();
+	return `${newMonth}/${newDayOfMonth}/${newYear}`;
 }
+
+// DELETE - Delete Student
+function deleteStudent(id) {
+	$.ajax({
+		url: `${apiUrl}/${id}`,
+		type: 'DELETE',
+	}).then(() => {
+		console.log(`API DELETE student ${id} successful`);
+		getAndRenderAll();
+	});
+}
+
+// POST - Add Student
+function addStudent() {
+	const name = $('#student-name').val();
+	const title = $('#book-title').val();
+	const out = $('#date-checked-out').val();
+	const due = $('#date-book-due').val();
+
+	// Construct a new student object
+	const newStudent = new Student(name, title, out, due);
+
+	// console.log(newStudent.fullName);
+	// console.log(newStudent.bookTitle);
+	// console.log(newStudent.bookCheckedOut);
+	// console.log(newStudent.bookDueBack);
+	// console.log(newStudent);
+
+	// jQuery POST
+	$.post(apiUrl, newStudent).then((data) => {
+		console.log(`API POST of ${data.fullName} successful`);
+		getAndRenderAll();
+	});
+}
+
+//TODO - PUT - Edit Student Info
+
+getAndRenderAll();
